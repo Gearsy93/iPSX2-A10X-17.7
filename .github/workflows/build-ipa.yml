@@ -58,6 +58,7 @@ jobs:
             -DCMAKE_OSX_SYSROOT=iphoneos \
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=17.0 \
+            -DCMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET=17.0 \
             -DiPSX2_REAL_DEVICE=ON \
             -DUSE_DISCORD_SDK=OFF \
             -DUSE_VULKAN=OFF \
@@ -142,6 +143,7 @@ jobs:
             -scheme "$SCHEME" \
             -configuration Release \
             -sdk iphoneos \
+            IPHONEOS_DEPLOYMENT_TARGET=17.0 \
             -archivePath "$ARCHIVE_PATH" \
             ONLY_ACTIVE_ARCH=NO \
             CODE_SIGN_IDENTITY="" \
@@ -210,6 +212,17 @@ jobs:
       # ──────────────────────────────────────────────────────────────────────────
       # 10. Upload IPA artifact
       # ──────────────────────────────────────────────────────────────────────────
+      - name: Validate iOS 17 compatibility metadata
+        run: |
+          set -euo pipefail
+          APP_DIR=$(find "$ARCHIVE_PATH/Products/Applications" -maxdepth 1 -name "*.app" | head -1)
+          MIN_IOS=$(/usr/libexec/PlistBuddy -c "Print :MinimumOSVersion" "$APP_DIR/Info.plist")
+          echo "MinimumOSVersion: $MIN_IOS"
+          test "$MIN_IOS" = "17.0" || {
+            echo "Expected iOS 17.0, got $MIN_IOS"
+            exit 1
+          }
+
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
@@ -220,13 +233,6 @@ jobs:
 
       # ──────────────────────────────────────────────────────────────────────────
       # 11. ccache stats
-      # ──────────────────────────────────────────────────────────────────────────
-      - name: ccache stats
-        if: always()
-        run: ccache --show-stats
-
-      # ──────────────────────────────────────────────────────────────────────────
-      # 12. Upload full logs on failure
       # ──────────────────────────────────────────────────────────────────────────
       - name: Upload build logs (on failure)
         if: failure()
