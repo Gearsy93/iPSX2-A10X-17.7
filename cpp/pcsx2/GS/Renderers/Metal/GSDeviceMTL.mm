@@ -32,7 +32,16 @@ GSDevice* MakeGSDeviceMTL()
 std::vector<GSAdapterInfo> GetMetalAdapterList()
 { @autoreleasepool {
 	std::vector<GSAdapterInfo> list;
-	auto devs = MRCTransfer(MTLCopyAllDevices());
+	#if TARGET_OS_IPHONE
+        // iOS 17 does not provide MTLCopyAllDevices().
+        // iPads expose a single default Metal device.
+        auto default_dev = MRCTransfer(MTLCreateSystemDefaultDevice());
+        NSArray<id<MTLDevice>>* device_array =
+            default_dev.Get() ? @[default_dev.Get()] : @[];
+        auto devs = MRCTransfer([device_array copy]);
+#else
+        auto devs = MRCTransfer(MTLCopyAllDevices());
+#endif
 	for (id<MTLDevice> dev in devs.Get())
 	{
 		GSAdapterInfo ai;
@@ -878,7 +887,16 @@ bool GSDeviceMTL::Create(GSVSyncMode vsync_mode, bool allow_present_throttle)
 	}
 
 	NSString* ns_adapter_name = [NSString stringWithUTF8String:GSConfig.Adapter.c_str()];
-	auto devs = MRCTransfer(MTLCopyAllDevices());
+	#if TARGET_OS_IPHONE
+        // iOS 17 does not provide MTLCopyAllDevices().
+        // iPads expose a single default Metal device.
+        auto default_dev = MRCTransfer(MTLCreateSystemDefaultDevice());
+        NSArray<id<MTLDevice>>* device_array =
+            default_dev.Get() ? @[default_dev.Get()] : @[];
+        auto devs = MRCTransfer([device_array copy]);
+#else
+        auto devs = MRCTransfer(MTLCopyAllDevices());
+#endif
 	for (id<MTLDevice> dev in devs.Get())
 	{
 		if ([[dev name] isEqualToString:ns_adapter_name])
