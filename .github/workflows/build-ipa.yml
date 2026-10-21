@@ -42,27 +42,12 @@ jobs:
       # ──────────────────────────────────────────────────────────────────────────
       # 3. Install build tools
       # ──────────────────────────────────────────────────────────────────────────
-      - name: Install build tools
+      - name: Verify preinstalled build tools
         run: |
-          brew update --quiet
-          brew install cmake xcbeautify || true
+          cmake --version
+          xcodebuild -version
+          command -v xcbeautify || true
 
-      # ──────────────────────────────────────────────────────────────────────────
-      # 4. ccache
-      # ──────────────────────────────────────────────────────────────────────────
-      - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: ${{ runner.os }}-${{ runner.arch }}-${{ github.ref_name }}
-          restore-keys: |
-            ${{ runner.os }}-${{ runner.arch }}-
-          max-size: 2G
-
-      # ──────────────────────────────────────────────────────────────────────────
-      # 5. CMake configure
-      #    FIX: use 'set -o pipefail' so the pipe to tee does NOT swallow cmake's
-      #    non-zero exit code. Without this, cmake can fail but the step passes.
-      # ──────────────────────────────────────────────────────────────────────────
       - name: CMake configure (Xcode generator, iphoneos SDK)
         working-directory: cpp
         run: |
@@ -74,8 +59,6 @@ jobs:
             -DCMAKE_OSX_ARCHITECTURES=arm64 \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=17.0 \
             -DiPSX2_REAL_DEVICE=ON \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DUSE_DISCORD_SDK=OFF \
             -DUSE_VULKAN=OFF \
             -DSDL_VULKAN=OFF \
