@@ -215,13 +215,44 @@ jobs:
       - name: Validate iOS 17 compatibility metadata
         run: |
           set -euo pipefail
-          APP_DIR=$(find "$ARCHIVE_PATH/Products/Applications" -maxdepth 1 -name "*.app" | head -1)
-          MIN_IOS=$(/usr/libexec/PlistBuddy -c "Print :MinimumOSVersion" "$APP_DIR/Info.plist")
-          echo "MinimumOSVersion: $MIN_IOS"
-          test "$MIN_IOS" = "17.0" || {
-            echo "Expected iOS 17.0, got $MIN_IOS"
-            exit 1
-          }
+          python3 - <<'PYCODE'
+          import os
+          import plistlib
+          import zipfile
+
+          ipa = os.environ["IPA_PATH"]
+
+          with zipfile.ZipFile(ipa) as z:
+              plists = [
+                  n for n in z.namelist()
+                  if n.startswith("Payload/")
+                  and n.endswith(".app/Info.plist")
+              ]
+
+              if len(plists) != 1:
+                  raise SystemExit(f"Expected one Info.plist, found {plists}")
+
+              info = plistlib.loads(z.read(plists[0]))
+              version = info.get("MinimumOSVersion")
+
+              print(f"MinimumOSVersion: {version}")
+
+              if version != "17.0":
+                  raise SystemExit(f"Expected iOS 17.0, got {version}")
+
+              executable = (
+                  plists[0].rsplit("/", 1)[0]
+                  + "/"
+                  + info["CFBundleExecutable"]
+              )
+
+              binary = z.read(executable)
+              print(f"Executable size: {len(binary):,} bytes")
+              print(
+                  "MTLCopyAllDevices present:",
+                  b"MTLCopyAllDevices" in binary
+              )
+          PYCODE
 
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
