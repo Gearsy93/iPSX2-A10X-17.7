@@ -171,7 +171,31 @@ static void execI()
 	// @@INTERP_81FC0@@  — caused massive interpreter slowdown.
 
 
-	// We need to increase the pc before executing the memRead32. An exception could appears
+
+    // [EE-DIAG-001] First actual execution of game ELF entry.
+    if (pc == 0x00100008u)
+    {
+        static bool logged = false;
+        if (!logged)
+        {
+            logged = true;
+            Console.WriteLn(
+                "@@EE_ELF_ENTRY@@ mode=INT pc=%08x cycle=%u "
+                "sp=%08x ra=%08x a0=%08x a1=%08x "
+                "v0=%08x v1=%08x status=%08x epc=%08x cause=%08x",
+                pc, cpuRegs.cycle,
+                cpuRegs.GPR.r[29].UL[0],
+                cpuRegs.GPR.r[31].UL[0],
+                cpuRegs.GPR.r[4].UL[0],
+                cpuRegs.GPR.r[5].UL[0],
+                cpuRegs.GPR.r[2].UL[0],
+                cpuRegs.GPR.r[3].UL[0],
+                cpuRegs.CP0.r[12],
+                cpuRegs.CP0.r[14],
+                cpuRegs.CP0.r[13]);
+        }
+    }
+        // We need to increase the pc before executing the memRead32. An exception could appears
 	// and it expects the PC counter to be pre-incremented
 	cpuRegs.pc += 4;
 

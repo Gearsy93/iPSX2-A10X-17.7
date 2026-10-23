@@ -1010,6 +1010,20 @@ static constexpr int SYSCALL_RING_SIZE = 32;
 
 extern "C" uint64_t recDispatchResolve(u32 pc)
 {
+
+    // [EE-DIAG-001] Dispatcher observation; registers may be unflushed.
+    if (pc == 0x00100008u)
+    {
+        static bool logged = false;
+        if (!logged)
+        {
+            logged = true;
+            Console.WriteLn(
+                "@@EE_ELF_RESOLVE@@ pc=%08x cycle=%u",
+                pc, cpuRegs.cycle);
+        }
+    }
+
 #if iPSX2_ENABLE_TEMP_DIAG
 	s_dispatchResolve_cnt.fetch_add(1, std::memory_order_relaxed);
 #endif // iPSX2_ENABLE_TEMP_DIAG
@@ -4109,6 +4123,20 @@ static bool isInterpRangeBlock(u32 pc) {
 
 static void recRecompile(const u32 startpc)
 {
+
+    // [EE-DIAG-001] Compilation, not necessarily execution.
+    if (startpc == 0x00100008u)
+    {
+        static bool logged = false;
+        if (!logged)
+        {
+            logged = true;
+            Console.WriteLn(
+                "@@EE_ELF_COMPILE@@ pc=%08x cycle=%u",
+                startpc, cpuRegs.cycle);
+        }
+    }
+
     // [R103] Compile-time log + code dump for bootstrap blocks
     if (startpc >= 0x00100000u && startpc < 0x00100100u) {
         static int s_100000_n = 0;

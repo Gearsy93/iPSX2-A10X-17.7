@@ -3178,6 +3178,17 @@ void VMManager::UpdateCPUImplementations()
 //	CpuVU0 = &CpuIntVU0;
 //	CpuVU1 = &CpuIntVU1;
 //#endif
+
+    // [EE-DIAG-001] Final CPU selection after all overrides.
+    Console.WriteLn(
+        "@@CPU_FINAL@@ EE=%s IOP=%s VU0=%s VU1=%s cfg_vu0=%d cfg_vu1=%d",
+        Cpu == &recCpu ? "JIT" : Cpu == &intCpu ? "INT" : "OTHER",
+        psxCpu == &psxRec ? "JIT" : psxCpu == &psxInt ? "INT" : "OTHER",
+        CpuVU0 == &CpuMicroVU0 ? "JIT" : CpuVU0 == &CpuIntVU0 ? "INT" : "OTHER",
+        CpuVU1 == &CpuMicroVU1 ? "JIT" : CpuVU1 == &CpuIntVU1 ? "INT" : "OTHER",
+        (int)EmuConfig.Cpu.Recompiler.EnableVU0,
+        (int)EmuConfig.Cpu.Recompiler.EnableVU1);
+
 }
 
 void VMManager::Internal::ClearCPUExecutionCaches()
