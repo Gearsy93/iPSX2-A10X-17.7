@@ -4140,6 +4140,9 @@ static void recRecompile(const u32 startpc)
     // [R103] Compile-time log + code dump for bootstrap blocks
     if (startpc >= 0x00100000u && startpc < 0x00100100u) {
         static int s_100000_n = 0;
+        fprintf(stderr,
+            "@@EE_DIAG_002@@ version=0.1.1 location=R103_BLOCK pc=%08x cycle=%u\n",
+            startpc, cpuRegs.cycle);
         Console.WriteLn(Color_Red, "[R103_BLOCK] startpc=%08x compile #%d cycle=%u",
             startpc, s_100000_n, cpuRegs.cycle);
         if (s_100000_n < 30) {

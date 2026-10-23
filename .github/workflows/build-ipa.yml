@@ -18,6 +18,7 @@ jobs:
       ARCHIVE_PATH: ${{ github.workspace }}/build/iPSX2.xcarchive
       IPA_DIR: ${{ github.workspace }}/ipa-staging
       IPA_PATH: ${{ github.workspace }}/iPSX2-unsigned.ipa
+      DIAG_VERSION: "0.1.1"
 
     steps:
       # ──────────────────────────────────────────────────────────────────────────
@@ -180,6 +181,33 @@ jobs:
 
           cp -rP "$APP_PATH" "$IPA_DIR/Payload/"
           APP_NAME=$(basename "$APP_PATH")
+          # EE-DIAG-002: stamp IPA version before packaging.
+          APP_PLIST="$IPA_DIR/Payload/$APP_NAME/Info.plist"
+          test -f "$APP_PLIST"
+
+          python3 - "$APP_PLIST" <<'PYCODE'
+          import os
+          import plistlib
+          import sys
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          version = os.environ["DIAG_VERSION"]
+          major, minor, patch = map(int, version.split("."))
+          build = f"{major * 10000 + minor * 100 + patch}.{os.environ['GITHUB_RUN_NUMBER']}"
+
+          with path.open("rb") as f:
+              info = plistlib.load(f)
+
+          info["CFBundleShortVersionString"] = version
+          info["CFBundleVersion"] = build
+
+          with path.open("wb") as f:
+              plistlib.dump(info, f, fmt=plistlib.FMT_BINARY)
+
+          print(f"EE-DIAG-002: IPA version={version}, build={build}")
+          PYCODE
+
           echo "Copied $APP_NAME into Payload/"
 
           SWIFT_LIBS_DIR="$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos"
@@ -233,6 +261,22 @@ jobs:
                   raise SystemExit(f"Expected one Info.plist, found {plists}")
 
               info = plistlib.loads(z.read(plists[0]))
+              expected_version = os.environ["DIAG_VERSION"]
+              major, minor, patch = map(int, expected_version.split("."))
+              expected_build = f"{major * 10000 + minor * 100 + patch}.{os.environ['GITHUB_RUN_NUMBER']}"
+
+              actual_version = info.get("CFBundleShortVersionString")
+              actual_build = info.get("CFBundleVersion")
+
+              print(f"IPA version: {actual_version}")
+              print(f"IPA build: {actual_build}")
+
+              if (actual_version, actual_build) != (expected_version, expected_build):
+                  raise SystemExit(
+                      f"IPA version mismatch: expected {expected_version} ({expected_build}), "
+                      f"got {actual_version} ({actual_build})"
+                  )
+
               version = info.get("MinimumOSVersion")
 
               print(f"MinimumOSVersion: {version}")
